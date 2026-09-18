@@ -1,0 +1,207 @@
+import {
+  SITES,
+  CIRCUMFERENCES,
+  type Assessment,
+  type Client,
+  type Draft,
+  type SkinfoldMeasurement,
+} from "@/types";
+import { today } from "@/lib/format";
+export const demoDate = "2026-09-18";
+export const clients: Client[] = [
+  {
+    id: "nathan",
+    name: "Nathan Demo",
+    age: 20,
+    sex: "male",
+    height: 1.82,
+    weight: 81.3,
+    fitness: "Ativo",
+    initials: "ND",
+    color: "lime",
+    goal: "Composição corporal",
+    createdAt: "2026-04-10",
+  },
+  {
+    id: "lucas",
+    name: "Lucas Martins",
+    age: 28,
+    sex: "male",
+    height: 1.78,
+    weight: 76.5,
+    fitness: "Atleta",
+    initials: "LM",
+    color: "blue",
+    goal: "Performance esportiva",
+    createdAt: "2026-05-14",
+  },
+  {
+    id: "rafael",
+    name: "Rafael Costa",
+    age: 34,
+    sex: "male",
+    height: 1.85,
+    weight: 89.2,
+    fitness: "Ativo",
+    initials: "RC",
+    color: "orange",
+    goal: "Composição corporal",
+    createdAt: "2026-06-02",
+  },
+  {
+    id: "ana",
+    name: "Ana Oliveira",
+    age: 26,
+    sex: "female",
+    height: 1.66,
+    weight: 61.2,
+    fitness: "Ativo",
+    initials: "AO",
+    color: "pink",
+    goal: "Condicionamento",
+    createdAt: "2026-09-15",
+  },
+  {
+    id: "pedro",
+    name: "Pedro Almeida",
+    age: 25,
+    sex: "male",
+    height: 1.76,
+    weight: 73.4,
+    fitness: "Iniciante",
+    initials: "PA",
+    color: "purple",
+    goal: "Força e movimento",
+    createdAt: "2026-08-01",
+  },
+  {
+    id: "beatriz",
+    name: "Beatriz Lima",
+    age: 30,
+    sex: "female",
+    height: 1.7,
+    weight: 65.8,
+    fitness: "Atleta",
+    initials: "BL",
+    color: "cyan",
+    goal: "Performance esportiva",
+    createdAt: "2026-09-12",
+  },
+];
+export const referenceReadings: SkinfoldMeasurement[] = SITES.map(
+  (site, i) => ({
+    site,
+    readings: [
+      [10, 10, 11],
+      [9, 9, 9],
+      [3, 5, 5],
+      [7, 6, 6],
+      [5, 6, 6],
+      [12, 12, 12],
+      [15, 16, 15],
+    ][i] as [number, number, number],
+  }),
+);
+const circumference = {
+  trunk: 122,
+  chest: 100,
+  waist: 83,
+  abdomen: 79.5,
+  hip: 100,
+  rightRelaxed: null,
+  rightContracted: null,
+  leftRelaxed: null,
+  leftContracted: null,
+  rightThigh: 56,
+  leftThigh: 56,
+};
+const base: Assessment = {
+  id: "nathan-sep",
+  clientId: "nathan",
+  date: demoDate,
+  age: 20,
+  sex: "male",
+  height: 1.82,
+  weight: 81.3,
+  fitness: "Ativo",
+  protocol: "jp7-male",
+  skinfolds: referenceReadings,
+  circumferences: circumference,
+  notes:
+    "Manter o acompanhamento das medidas e comparar nas mesmas condições de coleta.",
+  historicalNote:
+    "Referência original: braço direito 34/37 cm; esquerdo 33/37,5 cm. Ordem relaxado/contraído não confirmada. Valores não atribuídos aos campos.",
+  demo: true,
+};
+export const assessments: Assessment[] = [
+  base,
+  ...[
+    ["2026-08-10", 82.1, 86, 1.1],
+    ["2026-07-15", 83.2, 87.5, 1.22],
+    ["2026-06-12", 83.8, 89, 1.32],
+    ["2026-05-14", 84.6, 90, 1.47],
+    ["2026-04-10", 85.2, 91.5, 1.57],
+  ].map(([date, weight, waist, factor], i) => ({
+    ...base,
+    id: `nathan-${i}`,
+    date: String(date),
+    weight: Number(weight),
+    skinfolds: referenceReadings.map((m) => ({
+      ...m,
+      readings: m.readings.map(
+        (v) => Math.round(v! * Number(factor) * 10) / 10,
+      ) as [number, number, number],
+    })),
+    circumferences: { ...circumference, waist: Number(waist) },
+    historicalNote: "Histórico fictício criado para demonstrar comparações.",
+  })),
+  ...clients
+    .filter((c) => c.sex === "male" && c.id !== "nathan")
+    .flatMap((c, i) =>
+      [0, 1].map((j) => ({
+        ...base,
+        id: `${c.id}-${j}`,
+        clientId: c.id,
+        date: j ? "2026-08-13" : `2026-09-${17 - i * 2}`,
+        age: c.age,
+        height: c.height,
+        weight: c.weight + j * 0.7,
+        fitness: c.fitness,
+        skinfolds: referenceReadings.map((m) => ({
+          ...m,
+          readings: m.readings.map(
+            (v) => Math.round(v! * (1.6 + i * 0.25 + j * 0.1) * 10) / 10,
+          ) as [number, number, number],
+        })),
+        circumferences: {
+          ...circumference,
+          waist: 84 + i * 4 + j,
+          rightRelaxed: 33 + i,
+          rightContracted: 36 + i,
+          leftRelaxed: 32.5 + i,
+          leftContracted: 35.5 + i,
+        },
+        historicalNote: undefined,
+      })),
+    ),
+];
+export function newDraft(c: Client): Draft {
+  return {
+    id: crypto.randomUUID(),
+    clientId: c.id,
+    date: today(),
+    age: c.age,
+    sex: c.sex,
+    height: c.height,
+    weight: c.weight,
+    fitness: c.fitness,
+    protocol: "jp7-male",
+    skinfolds: SITES.map((site) => ({ site, readings: [null, null, null] })),
+    circumferences: Object.fromEntries(
+      CIRCUMFERENCES.map((k) => [k, null]),
+    ) as Assessment["circumferences"],
+    notes: "",
+    demo: false,
+    step: 0,
+  };
+}
