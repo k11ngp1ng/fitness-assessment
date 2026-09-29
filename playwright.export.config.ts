@@ -1,23 +1,22 @@
 import { defineConfig } from "@playwright/test";
+
+const prefix = process.env.EXPORT_BASE_PATH || "";
 export default defineConfig({
-  testDir: "./tests/e2e",
-  fullyParallel: false,
+  testDir: "./tests/export",
   workers: 1,
   timeout: 60000,
   use: {
-    baseURL: "http://127.0.0.1:3000",
-    viewport: { width: 1440, height: 1050 },
-    headless: true,
+    baseURL: `http://127.0.0.1:3100${prefix}/`,
     channel: process.env.CI ? undefined : "msedge",
+    headless: true,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
   webServer: process.env.CI
     ? {
-        command: "pnpm dev",
-        url: "http://127.0.0.1:3000",
+        command: "node scripts/serve-export.mjs",
+        url: `http://127.0.0.1:3100${prefix}/`,
         reuseExistingServer: false,
-        timeout: 120000,
       }
     : undefined,
   reporter: "list",

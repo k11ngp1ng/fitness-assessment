@@ -10,13 +10,16 @@ import {
   ChevronRight,
   ArrowUpRight,
   Activity,
+  Dumbbell,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { Loading } from "./ui";
+import { StorageRecovery } from "./storage-recovery";
 const nav = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
   { href: "/clientes", label: "Clientes", icon: Users },
+  { href: "/treinos", label: "Treinos", icon: Dumbbell },
   { href: "/avaliacoes", label: "Avaliações", icon: ClipboardList },
   { href: "/evolucao", label: "Evolução", icon: TrendingUp },
   { href: "/relatorios", label: "Relatórios", icon: FileText },
@@ -53,7 +56,9 @@ export function Shell({ children }: { children: ReactNode }) {
               <n.icon size={19} />
               <span>{n.label}</span>
               {n.href === "/clientes" && (
-                <span className="nav-count">{store.clients.length}</span>
+                <span className="nav-count">
+                  {store.clients.filter((c) => !c.archivedAt).length}
+                </span>
               )}
             </Link>
           ))}
@@ -105,7 +110,13 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         )}
         <main id="main-content" tabIndex={-1}>
-          {store.ready ? children : <Loading />}
+          {!store.ready ? (
+            <Loading />
+          ) : store.recovery ? (
+            <StorageRecovery />
+          ) : (
+            children
+          )}
         </main>
         <footer className="app-footer">
           <span>

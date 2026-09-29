@@ -1,4 +1,5 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
@@ -58,7 +59,7 @@ export function AssessmentHistory({ report = false }: { report?: boolean }) {
           const c = clients.find((c) => c.id === a.clientId)!;
           return (
             <Link
-              href={`/${report ? "relatorios" : "avaliacoes"}/${a.id}`}
+              href={recordHref(report ? "report" : "assessment", a.id)}
               key={a.id}
               className="table-row"
             >

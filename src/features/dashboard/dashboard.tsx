@@ -1,4 +1,5 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -24,6 +25,7 @@ import {
 import { ProgressChart } from "@/components/progress-chart";
 export function Dashboard() {
   const { clients, assessments } = useStore();
+  const activeClients = clients.filter((c) => !c.archivedAt);
   const nathan = clients.find((c) => c.id === "nathan") || clients[0];
   if (!nathan)
     return (
@@ -43,7 +45,7 @@ export function Dashboard() {
     .reverse()
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 4);
-  const recurring = clients.filter(
+  const recurring = activeClients.filter(
     (c) => historyFor(assessments, c.id).length > 1,
   ).length;
   return (
@@ -65,7 +67,7 @@ export function Dashboard() {
             <em>Mais possibilidades.</em>
           </h2>
           <p>Conecte cada avaliação à história de evolução do seu cliente.</p>
-          <Link href="/clientes/nathan" className="button light">
+          <Link href={recordHref("client", "nathan")} className="button light">
             Explorar avaliação de Nathan <ArrowUpRight size={17} />
           </Link>
         </div>
@@ -90,7 +92,7 @@ export function Dashboard() {
       <div className="stats-grid dashboard-stats">
         <MetricCard
           label="Clientes na carteira"
-          value={String(clients.length).padStart(2, "0")}
+          value={String(activeClients.length).padStart(2, "0")}
           caption="Cada jornada importa"
           icon={<Users size={18} />}
         />
@@ -141,7 +143,7 @@ export function Dashboard() {
             </div>
           </div>
           <Link
-            href={`/clientes/${nathan.id}`}
+            href={recordHref("client", nathan.id)}
             className="button outline full-width"
           >
             Ver jornada completa <ArrowRight size={16} />
@@ -170,7 +172,7 @@ export function Dashboard() {
             return (
               <Link
                 key={a.id}
-                href={`/avaliacoes/${a.id}`}
+                href={recordHref("assessment", a.id)}
                 className="table-row"
               >
                 <span className="table-person">

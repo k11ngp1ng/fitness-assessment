@@ -1,6 +1,7 @@
 "use client";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -10,128 +11,95 @@ import {
   clients as seedClients,
   assessments as seedAssessments,
 } from "@/data/seed";
+import type { Assessment, Client, Draft } from "@/types";
+import { today } from "@/lib/format";
 import {
-  CIRCUMFERENCES,
-  SITES,
-  type Assessment,
-  type Client,
-  type Draft,
-} from "@/types";
-import { errors } from "@/lib/validation";
-type Data = {
-  clients: Client[];
-  assessments: Assessment[];
-  drafts: Record<string, Draft>;
-};
+  LocalRepository,
+  RecoveryError,
+  STORAGE_KEY,
+  type LocalData as Data,
+} from "@/lib/storage";
 type Store = Data & {
   ready: boolean;
+  recovery: RecoveryError | null;
+  retryRead: () => void;
+  resetLocal: () => boolean;
   storageError: string;
   addClient: (c: Client) => boolean;
+  updateClient: (c: Client) => boolean;
+  setClientArchived: (id: string, archived: boolean) => boolean;
   saveAssessment: (a: Assessment) => boolean;
   saveDraft: (d: Draft) => void;
 };
 const Context = createContext<Store | null>(null);
-const KEY = "vertice:v1";
+
 const initial: Data = {
   clients: seedClients,
   assessments: seedAssessments,
   drafts: {},
 };
-function validClient(c: Client) {
-  return (
-    c &&
-    typeof c.id === "string" &&
-    typeof c.name === "string" &&
-    typeof c.initials === "string" &&
-    ["male", "female", "other"].includes(c.sex) &&
-    Number.isFinite(c.age) &&
-    Number.isFinite(c.height) &&
-    Number.isFinite(c.weight)
-  );
-}
-function validAssessment(a: Assessment) {
-  return (
-    a &&
-    typeof a.id === "string" &&
-    typeof a.clientId === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(a.date) &&
-    a.protocol === "jp7-male" &&
-    Number.isFinite(a.age) &&
-    Number.isFinite(a.weight) &&
-    Array.isArray(a.skinfolds) &&
-    a.skinfolds.length === 7 &&
-    SITES.every((site) =>
-      a.skinfolds.some(
-        (s) =>
-          s.site === site &&
-          Array.isArray(s.readings) &&
-          s.readings.length === 3 &&
-          s.readings.every((v) => v === null || typeof v === "number"),
-      ),
-    ) &&
-    a.circumferences &&
-    CIRCUMFERENCES.every(
-      (k) =>
-        a.circumferences[k] === null || typeof a.circumferences[k] === "number",
-    )
-  );
-}
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Data>(initial),
     [ready, setReady] = useState(false),
     [storageError, setStorageError] = useState("");
-  useEffect(() => {
+  const [recovery, setRecovery] = useState<RecoveryError | null>(null);
+  const [repository] = useState(() => new LocalRepository(() => localStorage));
+  const retryRead = useCallback(() => {
     try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (
-          !Array.isArray(parsed.clients) ||
-          !parsed.clients.every(validClient) ||
-          !Array.isArray(parsed.assessments) ||
-          !parsed.assessments.every(
-            (a: Assessment) =>
-              validAssessment(a) &&
-              errors(a, 3).length === 0 &&
-              parsed.clients.some((c: Client) => c.id === a.clientId),
-          ) ||
-          !parsed.drafts ||
-          typeof parsed.drafts !== "object" ||
-          !Object.values(parsed.drafts).every(
-            (d) =>
-              validAssessment(d as Draft) &&
-              parsed.clients.some(
-                (c: Client) => c.id === (d as Draft).clientId,
-              ) &&
-              Number.isInteger((d as Draft).step) &&
-              (d as Draft).step >= 0 &&
-              (d as Draft).step <= 3,
-          )
-        )
-          throw new Error();
-        setData(parsed);
-      }
-    } catch {
-      setStorageError(
-        "Não foi possível ler os dados locais. A demonstração está disponível; os dados existentes não foram substituídos.",
-      );
+      setData(repository.read(initial));
+      setRecovery(null);
+      setStorageError("");
+    } catch (error) {
+      if (error instanceof RecoveryError) setRecovery(error);
     }
     setReady(true);
-  }, []);
-  function persist(next: Data): boolean {
-    try {
-      // Preserve invalid numeric draft entries as invalid, rather than JSON's
-      // default null conversion (which could silently omit an optional measure).
-      localStorage.setItem(
-        KEY,
-        JSON.stringify(next, (_key, value) =>
-          typeof value === "number" && !Number.isFinite(value) ? -1 : value,
+  }, [repository]);
+  useEffect(() => {
+    // A leitura precisa terminar antes de expor os formulários após a hidratação.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    retryRead();
+    function changed(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY && event.key !== null) return;
+      repository.invalidate();
+      setRecovery(
+        new RecoveryError(
+          "O armazenamento mudou em outra aba. Recarregue os dados salvos para continuar.",
+          event.newValue,
+          false,
         ),
       );
-      setData(next);
+    }
+    window.addEventListener("storage", changed);
+    return () => {
+      window.removeEventListener("storage", changed);
+    };
+  }, [repository, retryRead]);
+  function resetLocal(): boolean {
+    if (!recovery?.readable) return false;
+    try {
+      repository.reset(recovery.raw, initial, crypto.randomUUID());
+      setData(initial);
+      setRecovery(null);
       setStorageError("");
       return true;
     } catch {
+      setStorageError(
+        "Não foi possível reinicializar com segurança. O original e qualquer cópia já criada foram mantidos. Libere espaço ou recarregue os dados salvos.",
+      );
+      return false;
+    }
+  }
+  function persist(next: Data): boolean {
+    try {
+      repository.write(next);
+      setData(next);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      if (error instanceof RecoveryError) {
+        setRecovery(error);
+        return false;
+      }
       setData(next);
       setStorageError(
         "Armazenamento indisponível. As alterações estão apenas nesta sessão. Libere espaço antes de fechar a página.",
@@ -144,12 +112,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         ...data,
         ready,
+        recovery,
+        retryRead,
+        resetLocal,
         storageError,
-        addClient: (c) => persist({ ...data, clients: [...data.clients, c] }),
+        addClient: (c) =>
+          persist({
+            ...data,
+            clients: data.clients.some((existing) => existing.id === c.id)
+              ? data.clients.map((existing) =>
+                  existing.id === c.id ? c : existing,
+                )
+              : [...data.clients, c],
+          }),
+        updateClient: (updated) => {
+          if (!data.clients.some((c) => c.id === updated.id)) return false;
+          return persist({
+            ...data,
+            clients: data.clients.map((c) =>
+              c.id === updated.id
+                ? {
+                    ...updated,
+                    createdAt: c.createdAt,
+                    archivedAt: c.archivedAt,
+                  }
+                : c,
+            ),
+          });
+        },
+        setClientArchived: (id, archived) => {
+          if (!data.clients.some((c) => c.id === id)) return false;
+          return persist({
+            ...data,
+            clients: data.clients.map((c) =>
+              c.id === id ? { ...c, archivedAt: archived ? today() : null } : c,
+            ),
+          });
+        },
         saveDraft: (d) => {
+          if (!data.clients.some((c) => c.id === d.clientId && !c.archivedAt))
+            return;
           persist({ ...data, drafts: { ...data.drafts, [d.clientId]: d } });
         },
         saveAssessment: (a) => {
+          if (!data.clients.some((c) => c.id === a.clientId && !c.archivedAt))
+            return false;
           const drafts = { ...data.drafts };
           delete drafts[a.clientId];
           return persist({

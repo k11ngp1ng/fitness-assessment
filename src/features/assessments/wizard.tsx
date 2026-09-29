@@ -1,4 +1,5 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,10 +31,11 @@ export function AssessmentWizard() {
   const query = useSearchParams();
   const [clientId, setClientId] = useState(query.get("cliente") || "");
   const client = clients.find((c) => c.id === clientId);
+  const activeClients = clients.filter((c) => !c.archivedAt);
   return (
     <>
       <Link
-        href={client ? `/clientes/${client.id}` : "/avaliacoes"}
+        href={client ? recordHref("client", client.id) : "/avaliacoes"}
         className="back-link"
       >
         <ArrowLeft size={15} />
@@ -44,7 +46,19 @@ export function AssessmentWizard() {
         title="Uma nova leitura. Um novo começo."
         description="Da coleta ao resultado, com precisão em cada etapa."
       />
-      {client ? (
+      {client?.archivedAt ? (
+        <EmptyState
+          title="Cliente arquivado"
+          description="Restaure o cadastro no perfil para criar ou retomar avaliações. O histórico permanece disponível."
+        >
+          <Link
+            className="button outline"
+            href={recordHref("client", client.id)}
+          >
+            Abrir perfil do cliente
+          </Link>
+        </EmptyState>
+      ) : client ? (
         <Wizard key={clientId} client={client} />
       ) : (
         <section className="panel choose-client">
@@ -57,17 +71,17 @@ export function AssessmentWizard() {
               onChange={(e) => setClientId(e.target.value)}
             >
               <option value="">Selecione um cliente</option>
-              {clients.map((c) => (
+              {activeClients.map((c) => (
                 <option value={c.id} key={c.id}>
                   {c.name}
                 </option>
               ))}
             </select>
           </label>
-          {!clients.length && (
+          {!activeClients.length && (
             <EmptyState
-              title="Nenhum cliente cadastrado"
-              description="Cadastre um cliente para começar."
+              title="Nenhum cliente ativo"
+              description="Cadastre ou restaure um cliente para começar."
             />
           )}
           <Link className="text-link" href="/clientes">
@@ -131,7 +145,7 @@ function Wizard({ client }: { client: Client }) {
     const { step: _, ...assessment } = draft;
     const ok = store.saveAssessment(assessment);
     if (ok) {
-      router.push(`/avaliacoes/${assessment.id}?salva=1`);
+      router.push(`${recordHref("assessment", assessment.id)}&salva=1`);
     } else {
       setSaving(false);
       setValidation([

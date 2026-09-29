@@ -9,7 +9,7 @@ test("WCAG AA audit of dashboard and measurement workflow", async ({
     "/",
     "/clientes",
     "/avaliacoes/nova?cliente=nathan",
-    "/avaliacoes/nathan-sep",
+    "/avaliacoes/resultado/?id=nathan-sep",
   ]) {
     await page.goto(route);
     await expect(page.locator("main h1")).toBeVisible();

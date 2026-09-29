@@ -8,13 +8,18 @@ export function Progress() {
   const { clients, assessments } = useStore();
   const [id, setId] = useState("nathan");
   const history = historyFor(assessments, id);
+  const selectedClient = clients.find((c) => c.id === id);
   return (
     <>
       <PageHeader
         eyebrow="EVOLUÇÃO & CONSISTÊNCIA"
         title="A história por trás dos números."
         description="Compare momentos, reconheça mudanças e planeje os próximos passos."
-        action={<NewAssessment clientId={id} />}
+        action={
+          selectedClient && !selectedClient.archivedAt ? (
+            <NewAssessment clientId={id} />
+          ) : undefined
+        }
       />
       <label className="field client-select">
         <span>Cliente em acompanhamento</span>
@@ -22,6 +27,7 @@ export function Progress() {
           {clients.map((c) => (
             <option value={c.id} key={c.id}>
               {c.name}
+              {c.archivedAt ? " (arquivado)" : ""}
             </option>
           ))}
         </select>

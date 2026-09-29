@@ -175,18 +175,10 @@ export function NumberField({
   onFocus?: () => void;
   required?: boolean;
 }) {
-  const [raw, setRaw] = useState(
-    value === null ? "" : String(value).replace(".", ","),
-  );
-  useEffect(() => {
-    setRaw(
-      value === null
-        ? ""
-        : Number.isNaN(value)
-          ? "-"
-          : String(value).replace(".", ","),
-    );
-  }, [value]);
+  const [entry, setEntry] = useState({ value, raw: formatNumberInput(value) });
+  const raw = Object.is(entry.value, value)
+    ? entry.raw
+    : formatNumberInput(value);
   return (
     <label className="field">
       <span>
@@ -210,8 +202,9 @@ export function NumberField({
           }}
           onChange={(e) => {
             const input = e.target.value;
-            setRaw(input);
-            onChange(parseDecimal(input));
+            const parsed = parseDecimal(input);
+            setEntry({ value: parsed, raw: input });
+            onChange(parsed);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -231,6 +224,13 @@ export function NumberField({
       </div>
     </label>
   );
+}
+function formatNumberInput(value: number | null): string {
+  return value === null
+    ? ""
+    : Number.isNaN(value)
+      ? "-"
+      : String(value).replace(".", ",");
 }
 export function TextLink({
   href,

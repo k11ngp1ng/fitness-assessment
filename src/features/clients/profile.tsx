@@ -1,5 +1,7 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import Link from "next/link";
+import { useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -8,6 +10,7 @@ import {
   Ruler,
   Scale,
   Activity,
+  X,
 } from "lucide-react";
 import { useStore, historyFor } from "@/lib/store";
 import { safeResult, compare } from "@/lib/calculations";
@@ -21,8 +24,16 @@ import {
 import { ProgressChart } from "@/components/progress-chart";
 import { BodyMap } from "@/components/body-map";
 import { dateLabel, fmt } from "@/lib/format";
+import { ClientForm } from "@/features/clients/clients";
 export function ClientProfile({ id }: { id: string }) {
-  const { clients, assessments } = useStore();
+  const { clients, assessments, setClientArchived } = useStore();
+  const editDialog = useRef<HTMLDialogElement>(null);
+  const archiveDialog = useRef<HTMLDialogElement>(null);
+  const archiveAction = useRef<HTMLButtonElement>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [pendingArchive, setPendingArchive] = useState<boolean | null>(null);
   const c = clients.find((c) => c.id === id);
   if (!c)
     return (
@@ -35,6 +46,19 @@ export function ClientProfile({ id }: { id: string }) {
     a = history[0],
     result = safeResult(a),
     delta = a && history[1] ? compare(a, history[1]) : null;
+  function changeArchive(archived: boolean) {
+    if (!setClientArchived(id, archived)) {
+      setPendingArchive(archived);
+      setActionError(
+        "A alteração está apenas nesta sessão. Verifique o aviso de armazenamento e tente salvar novamente.",
+      );
+      return;
+    }
+    setPendingArchive(null);
+    setActionError("");
+    archiveDialog.current?.close();
+    requestAnimationFrame(() => archiveAction.current?.focus());
+  }
   return (
     <>
       <Link href="/clientes" className="back-link">
@@ -46,7 +70,10 @@ export function ClientProfile({ id }: { id: string }) {
           <Avatar client={c} large />
           <div>
             <div className="eyebrow">
-              JORNADA DO CLIENTE <span className="tag">{c.fitness}</span>
+              JORNADA DO CLIENTE{" "}
+              <span className="tag">
+                {c.archivedAt ? `Condicionamento: ${c.fitness}` : c.fitness}
+              </span>
             </div>
             <h1>{c.name}</h1>
             <p>
@@ -57,7 +84,52 @@ export function ClientProfile({ id }: { id: string }) {
           </div>
         </div>
         <div className="profile-actions">
-          <NewAssessment clientId={id} />
+          {!c.archivedAt && pendingArchive !== true && (
+            <NewAssessment clientId={id} />
+          )}
+          <button
+            className="button outline"
+            onClick={() => {
+              setEditOpen(true);
+              editDialog.current?.showModal();
+            }}
+          >
+            Editar cadastro
+          </button>
+          {pendingArchive === true ? (
+            <button
+              ref={archiveAction}
+              className="button outline"
+              onClick={() => {
+                setArchiveOpen(true);
+                archiveDialog.current?.showModal();
+              }}
+            >
+              Tentar salvar arquivamento
+            </button>
+          ) : c.archivedAt || pendingArchive === false ? (
+            <button
+              ref={archiveAction}
+              className="button outline"
+              onClick={() => changeArchive(false)}
+            >
+              {pendingArchive === false
+                ? "Tentar salvar restauração"
+                : "Restaurar cliente"}
+            </button>
+          ) : (
+            <button
+              ref={archiveAction}
+              className="button outline"
+              onClick={() => {
+                setActionError("");
+                setArchiveOpen(true);
+                archiveDialog.current?.showModal();
+              }}
+            >
+              Arquivar cliente
+            </button>
+          )}
           <span>
             <CalendarDays size={13} />
             {a
@@ -66,6 +138,76 @@ export function ClientProfile({ id }: { id: string }) {
           </span>
         </div>
       </section>
+      {c.archivedAt && (
+        <p className="archive-notice" role="status">
+          {pendingArchive === true
+            ? `Arquivamento de ${dateLabel(c.archivedAt)} ainda não salvo. Tente gravar novamente antes de fechar a página.`
+            : `Cliente arquivado em ${dateLabel(c.archivedAt)}. O histórico e os relatórios continuam disponíveis. Restaure o cadastro para criar novas avaliações.`}
+        </p>
+      )}
+      {actionError && !archiveOpen && (
+        <p className="error-message" role="alert">
+          {actionError}
+        </p>
+      )}
+      <dialog
+        ref={editDialog}
+        className="modal"
+        aria-labelledby="edit-client-title"
+        onClose={() => setEditOpen(false)}
+      >
+        <div className="modal-heading">
+          <h2 id="edit-client-title">Editar cadastro</h2>
+          <button
+            aria-label="Fechar edição"
+            className="icon-button"
+            onClick={() => editDialog.current?.close()}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        {editOpen && (
+          <ClientForm
+            client={c}
+            onDone={() => {
+              editDialog.current?.close();
+              setEditOpen(false);
+            }}
+          />
+        )}
+      </dialog>
+      <dialog
+        ref={archiveDialog}
+        className="modal"
+        aria-labelledby="archive-client-title"
+        onClose={() => setArchiveOpen(false)}
+      >
+        <h2 id="archive-client-title">Arquivar {c.name}?</h2>
+        <p>
+          O cliente sairá da lista ativa. Avaliações, rascunhos e relatórios
+          permanecerão vinculados ao cadastro e poderão ser consultados após o
+          arquivamento.
+        </p>
+        {actionError && (
+          <p className="error-message" role="alert">
+            {actionError}
+          </p>
+        )}
+        <div className="recovery-actions">
+          <button
+            className="button outline"
+            onClick={() => archiveDialog.current?.close()}
+          >
+            Cancelar
+          </button>
+          <button
+            className="button primary"
+            onClick={() => changeArchive(true)}
+          >
+            Confirmar arquivamento
+          </button>
+        </div>
+      </dialog>
       {a && result ? (
         <>
           <div className="stats-grid four">
@@ -116,7 +258,7 @@ export function ClientProfile({ id }: { id: string }) {
               <div className="timeline">
                 {history.map((item, i) => (
                   <Link
-                    href={`/avaliacoes/${item.id}`}
+                    href={recordHref("assessment", item.id)}
                     className="timeline-item"
                     key={item.id}
                   >
@@ -172,7 +314,7 @@ export function ClientProfile({ id }: { id: string }) {
               </div>
               <Link
                 className="button outline full-width"
-                href={`/relatorios/${a.id}`}
+                href={recordHref("report", a.id)}
               >
                 <FileText size={16} />
                 Abrir relatório
@@ -185,7 +327,7 @@ export function ClientProfile({ id }: { id: string }) {
           title="Toda evolução tem um começo."
           description="Crie a primeira avaliação para preencher esta jornada com resultados."
         >
-          <NewAssessment clientId={id} />
+          {!c.archivedAt && <NewAssessment clientId={id} />}
         </EmptyState>
       )}
     </>

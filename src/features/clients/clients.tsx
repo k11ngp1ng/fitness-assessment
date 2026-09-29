@@ -1,4 +1,5 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Plus, ArrowUpRight, X, Users, Check } from "lucide-react";
@@ -17,15 +18,19 @@ export function Clients() {
   const [search, setSearch] = useState(""),
     [tab, setTab] = useState("all");
   const dialog = useRef<HTMLDialogElement>(null);
+  const activeClients = store.clients.filter((c) => !c.archivedAt);
   const filtered = store.clients.filter(
     (c) =>
       c.name
         .toLocaleLowerCase("pt-BR")
         .includes(search.toLocaleLowerCase("pt-BR")) &&
-      (tab === "all" ||
-        (tab === "history"
-          ? historyFor(store.assessments, c.id).length > 0
-          : historyFor(store.assessments, c.id).length === 0)),
+      (tab === "archived"
+        ? !!c.archivedAt
+        : !c.archivedAt &&
+          (tab === "all" ||
+            (tab === "history"
+              ? historyFor(store.assessments, c.id).length > 0
+              : historyFor(store.assessments, c.id).length === 0))),
   );
   return (
     <>
@@ -49,6 +54,7 @@ export function Clients() {
             ["all", "Todos os clientes"],
             ["history", "Com avaliações"],
             ["new", "Sem avaliação"],
+            ["archived", "Arquivados"],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -57,7 +63,10 @@ export function Clients() {
               onClick={() => setTab(id)}
             >
               {label}
-              {id === "all" && <span>{store.clients.length}</span>}
+              {id === "all" && <span>{activeClients.length}</span>}
+              {id === "archived" && (
+                <span>{store.clients.length - activeClients.length}</span>
+              )}
             </button>
           ))}
         </div>
@@ -69,7 +78,7 @@ export function Clients() {
           return (
             <Link
               className="panel client-card"
-              href={`/clientes/${c.id}`}
+              href={recordHref("client", c.id)}
               key={c.id}
             >
               <div className="client-card-top">
@@ -78,7 +87,14 @@ export function Clients() {
               </div>
               <h2>{c.name}</h2>
               <p>{c.goal}</p>
-              <span className="tag">{c.fitness}</span>
+              <span className="tag">
+                {c.archivedAt ? `Condicionamento: ${c.fitness}` : c.fitness}
+              </span>
+              {c.archivedAt && (
+                <span className="tag">
+                  Arquivado em {dateLabel(c.archivedAt)}
+                </span>
+              )}
               <div className="client-facts">
                 <div>
                   <small>IDADE</small>
@@ -116,7 +132,11 @@ export function Clients() {
       {!filtered.length && (
         <EmptyState
           title="Nenhum cliente encontrado"
-          description="Experimente outro nome ou crie um novo cliente."
+          description={
+            tab === "archived"
+              ? "Nenhum cliente arquivado corresponde à busca."
+              : "Experimente outro nome ou crie um novo cliente."
+          }
         />
       )}
       <dialog ref={dialog} className="modal">
@@ -138,17 +158,24 @@ export function Clients() {
     </>
   );
 }
-function ClientForm({ onDone }: { onDone: () => void }) {
-  const { addClient } = useStore();
-  const [form, setForm] = useState({
-    name: "",
-    age: 25,
-    height: 1.75,
-    weight: 75,
-    sex: "male",
-    fitness: "Ativo",
-    goal: "Composição corporal",
-  });
+export function ClientForm({
+  onDone,
+  client,
+}: {
+  onDone: () => void;
+  client?: Client;
+}) {
+  const { addClient, updateClient } = useStore();
+  const pendingClientId = useRef<string | null>(null);
+  const [form, setForm] = useState(() => ({
+    name: client?.name ?? "",
+    age: client?.age ?? 25,
+    height: client?.height ?? 1.75,
+    weight: client?.weight ?? 75,
+    sex: client?.sex ?? "male",
+    fitness: client?.fitness ?? "Ativo",
+    goal: client?.goal ?? "Composição corporal",
+  }));
   const [error, setError] = useState("");
   return (
     <form
@@ -166,20 +193,40 @@ function ClientForm({ onDone }: { onDone: () => void }) {
           return;
         }
         const name = form.name.trim();
-        addClient({
+        if (!client) pendingClientId.current ??= crypto.randomUUID();
+        const updated: Client = {
           ...form,
           name,
-          id: crypto.randomUUID(),
-          sex: form.sex as Client["sex"],
-          fitness: form.fitness as Client["fitness"],
+          id: client?.id ?? pendingClientId.current ?? crypto.randomUUID(),
+          sex: form.sex,
+          fitness: form.fitness,
           initials: name
             .split(/\s+/)
             .slice(0, 2)
             .map((s) => s[0])
             .join("")
             .toUpperCase(),
-          color: "lime",
-          createdAt: today(),
+          color: client?.color ?? "lime",
+          createdAt: client?.createdAt ?? today(),
+          archivedAt: client?.archivedAt ?? null,
+        };
+        const saved = client ? updateClient(updated) : addClient(updated);
+        if (!saved) {
+          setError(
+            `Não foi possível salvar ${client ? "as alterações" : "o cliente"} neste navegador. ${client ? "As alterações estão" : "O cadastro está"} apenas nesta sessão. Verifique o aviso de armazenamento e tente novamente antes de fechar a página.`,
+          );
+          return;
+        }
+        pendingClientId.current = null;
+        setError("");
+        setForm({
+          name: "",
+          age: 25,
+          height: 1.75,
+          weight: 75,
+          sex: "male",
+          fitness: "Ativo",
+          goal: "Composição corporal",
         });
         onDone();
       }}
@@ -205,7 +252,11 @@ function ClientForm({ onDone }: { onDone: () => void }) {
           <span>Sexo</span>
           <select
             value={form.sex}
-            onChange={(e) => setForm({ ...form, sex: e.target.value })}
+            onChange={(e) => {
+              const sex = e.target.value;
+              if (sex === "male" || sex === "female" || sex === "other")
+                setForm({ ...form, sex });
+            }}
           >
             <option value="male">Masculino</option>
             <option value="female">Feminino</option>
@@ -228,7 +279,15 @@ function ClientForm({ onDone }: { onDone: () => void }) {
           <span>Condicionamento</span>
           <select
             value={form.fitness}
-            onChange={(e) => setForm({ ...form, fitness: e.target.value })}
+            onChange={(e) => {
+              const fitness = e.target.value;
+              if (
+                fitness === "Iniciante" ||
+                fitness === "Ativo" ||
+                fitness === "Atleta"
+              )
+                setForm({ ...form, fitness });
+            }}
           >
             {["Iniciante", "Ativo", "Atleta"].map((v) => (
               <option key={v}>{v}</option>
@@ -262,7 +321,7 @@ function ClientForm({ onDone }: { onDone: () => void }) {
       </p>
       <button type="submit" className="button primary full-width">
         <Check size={17} />
-        Criar cliente
+        {client ? "Salvar alterações" : "Criar cliente"}
       </button>
     </form>
   );

@@ -11,12 +11,21 @@ pnpm install
 pnpm dev
 ```
 
-Abra http://127.0.0.1:3000. Para produção local: `pnpm build` e `pnpm start`.
+Abra http://127.0.0.1:3000. O projeto está configurado para exportação estática: `pnpm build` gera `out/`, que deve ser servido por um servidor estático. O script `pnpm start` usa `next start` e não é compatível com esse modo de publicação.
+
+## Desenvolvimento e evolução
+
+As orientações para trabalhar neste repositório estão em [AGENTS.md](AGENTS.md). O [plano de evolução](docs/ROADMAP.md) reúne lacunas observadas, prioridades e critérios de conclusão. Cada item distingue entregas implementadas de propostas pendentes.
+
+O [piloto gratuito proposto](docs/PILOT-INFRA.md) usará Cloudflare Pages Free, Supabase Free e login Google, dentro das cotas dos fornecedores. Ainda não está configurado nem apto a receber dados reais.
+
+**Publicação estática:** perfis, resultados e relatórios usam páginas fixas com o ID na query string, compatíveis com registros criados após o build e com o prefixo do GitHub Pages. As URLs antigas dos exemplos continuam disponíveis. Os registros permanecem apenas no navegador em que foram salvos. Consulte [a verificação da exportação](docs/STATIC-EXPORT.md).
 
 ## Funcionalidades
 
 - Dashboard com métricas do conjunto demonstrativo, avaliações recentes e evolução.
-- Cadastro, busca e filtros de clientes; perfil com histórico e gráficos interativos.
+- Protótipo interativo em **Treinos**: criar exercícios, montar uma rotina de exemplo com vários exercícios, séries e metas ajustáveis, registrar por cliente ou profissional e comparar com a execução anterior compatível. Os dados desse protótipo existem somente na aba aberta e desaparecem ao recarregar; não há upload, publicação, conta ou uso offline.
+- Cadastro, edição, arquivamento e restauração de clientes; busca e filtros; perfil com histórico e gráficos interativos.
 - Avaliação guiada: Dados → Dobras → Perimetria → Revisão → Resultado.
 - Rascunhos por cliente salvos a cada alteração no navegador, com feedback de indisponibilidade.
 - Três leituras por dobra, médias sem arredondamento intermediário, entrada decimal com ponto ou vírgula, avanço com Tab/Enter, alertas de variação e valores incomuns.
@@ -25,6 +34,8 @@ Abra http://127.0.0.1:3000. Para produção local: `pnpm build` e `pnpm start`.
 - Relatório HTML com impressão clara e gráfico vetorial para evitar cortes no redimensionamento.
 - Layout desktop, tablet e celular; foco visível, labels, atalho de busca `/` e redução de movimento.
 - Estados vazios, carregamento, erro de rota e falha de armazenamento.
+- Recuperação de dados locais com bloqueio de sobrescrita, download do original e reinicialização confirmada com cópia preservada. Veja [os detalhes e limites](docs/LOCAL-RECOVERY.md).
+- Arquivamento sem exclusão de avaliações, rascunhos ou relatórios. O formato local v1 é migrado para v2 na próxima gravação confirmada; veja [gestão do cadastro](docs/CLIENT-MANAGEMENT.md).
 
 ## Dados e cálculo
 
@@ -44,13 +55,15 @@ Alertas operacionais, não diagnósticos: amplitude das leituras maior que o má
 
 ```sh
 pnpm typecheck
+pnpm lint
+pnpm format:check
 pnpm test
+pnpm test:e2e # com pnpm dev rodando em outro terminal no Windows
 pnpm build
-# Com pnpm dev rodando em outro terminal:
-pnpm test:e2e
+pnpm test:export # com node scripts/serve-export.mjs em outro terminal no Windows
 ```
 
-E2E utiliza Microsoft Edge (`channel: msedge`). Em outro ambiente, ajuste `playwright.config.ts` para Chromium e instale-o com `pnpm exec playwright install chromium`.
+No Windows local, os E2E exigem os servidores indicados em outro terminal e usam Microsoft Edge. No CI, iniciam os servidores automaticamente e usam Chromium instalado pelo Playwright. O teste de exportação serve `out/` sem fallback de SPA. O workflow valida também uma segunda exportação com o prefixo do GitHub Pages antes de publicar. Veja [a rotina de CI](docs/CI.md) e [a verificação da exportação](docs/STATIC-EXPORT.md).
 
 Testes cobrem cálculos, validação, navegação, cadastro, coleta, persistência, comparações, layout móvel, impressão e auditoria WCAG AA automatizada com axe. Artefatos em `artifacts/`.
 

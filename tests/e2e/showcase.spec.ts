@@ -17,12 +17,12 @@ test("Dashboard, profile, history, progress and report; mobile and print", async
   });
   for (const route of [
     "/clientes",
-    "/clientes/nathan",
+    "/clientes/perfil/?id=nathan",
     "/avaliacoes",
     "/evolucao",
     "/relatorios",
-    "/avaliacoes/nathan-sep",
-    "/relatorios/nathan-sep",
+    "/avaliacoes/resultado/?id=nathan-sep",
+    "/relatorios/visualizar/?id=nathan-sep",
   ]) {
     await page.goto(route);
     await expect(page.locator("main h1")).toBeVisible();
@@ -41,9 +41,9 @@ test("Dashboard, profile, history, progress and report; mobile and print", async
   for (const route of [
     "/",
     "/clientes",
-    "/clientes/nathan",
+    "/clientes/perfil/?id=nathan",
     "/avaliacoes/nova?cliente=nathan",
-    "/avaliacoes/nathan-sep",
+    "/avaliacoes/resultado/?id=nathan-sep",
   ]) {
     await page.goto(route);
     await expect(page.locator("main h1")).toBeVisible();

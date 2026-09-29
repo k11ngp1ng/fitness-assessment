@@ -21,6 +21,7 @@ export const clients: Client[] = [
     color: "lime",
     goal: "Composição corporal",
     createdAt: "2026-04-10",
+    archivedAt: null,
   },
   {
     id: "lucas",
@@ -34,6 +35,7 @@ export const clients: Client[] = [
     color: "blue",
     goal: "Performance esportiva",
     createdAt: "2026-05-14",
+    archivedAt: null,
   },
   {
     id: "rafael",
@@ -47,6 +49,7 @@ export const clients: Client[] = [
     color: "orange",
     goal: "Composição corporal",
     createdAt: "2026-06-02",
+    archivedAt: null,
   },
   {
     id: "ana",
@@ -60,6 +63,7 @@ export const clients: Client[] = [
     color: "pink",
     goal: "Condicionamento",
     createdAt: "2026-09-15",
+    archivedAt: null,
   },
   {
     id: "pedro",
@@ -73,6 +77,7 @@ export const clients: Client[] = [
     color: "purple",
     goal: "Força e movimento",
     createdAt: "2026-08-01",
+    archivedAt: null,
   },
   {
     id: "beatriz",
@@ -86,6 +91,7 @@ export const clients: Client[] = [
     color: "cyan",
     goal: "Performance esportiva",
     createdAt: "2026-09-12",
+    archivedAt: null,
   },
 ];
 export const referenceReadings: SkinfoldMeasurement[] = SITES.map(

@@ -12,6 +12,7 @@ export interface Client {
   color: string;
   goal: string;
   createdAt: string;
+  archivedAt: string | null;
 }
 export const SITES = [
   "subscapular",

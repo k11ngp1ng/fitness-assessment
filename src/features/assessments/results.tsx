@@ -1,4 +1,5 @@
 "use client";
+import { recordHref } from "@/lib/routes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -115,7 +116,7 @@ export function Results({
   return (
     <div className={report ? "report-view" : "results-view"}>
       <div className="results-toolbar">
-        <Link href={`/clientes/${client.id}`} className="back-link">
+        <Link href={recordHref("client", client.id)} className="back-link">
           <ArrowLeft size={15} />
           Jornada de {client.name.split(" ")[0]}
         </Link>
@@ -125,7 +126,7 @@ export function Results({
             Imprimir / Salvar PDF
           </button>
         ) : (
-          <Link href={`/relatorios/${id}`} className="button outline">
+          <Link href={recordHref("report", id)} className="button outline">
             <FileText size={16} />
             Ver relatório
           </Link>
