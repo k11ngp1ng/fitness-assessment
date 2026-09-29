@@ -10,6 +10,8 @@ Aplicação local, em português, para avaliação física: Dashboard → Client
 
 Grafite #101211, superfícies #191c19, texto marfim #f3f4ee, acento lima #d2f56a. Tipografia sans com números tabulares, bordas discretas e cantos moderados. Navegação lateral fixa no desktop e compacta no celular. Dados de entrada em controles grandes; resultados em métricas editoriais e gráficos mínimos. Animações respeitam redução de movimento.
 
+O símbolo geométrico do Vértice usa dois traços em marfim e lima na navegação e no ícone do site. O cabeçalho mostra data e hora atuais no fuso `America/Sao_Paulo`, atualizadas a cada segundo após carregar no navegador. As datas dos registros demonstrativos continuam históricas e não mudam com esse relógio.
+
 ## Modelo
 
 Client contém dados cadastrais e data opcional de arquivamento; Assessment preserva um snapshot de idade, sexo, peso e altura na data; SkinfoldMeasurement contém três leituras por sítio; CircumferenceMeasurement contém campos independentes para cada braço/estado; BodyCompositionResult contém estimativas derivadas. O registro de protocolos desacopla cálculos da UI. Comparações usam avaliações anteriores do mesmo cliente e diferenças neutras, sem diagnóstico. Edição do cadastro não altera snapshots anteriores; arquivamento conserva histórico e rascunhos e impede novas avaliações até a restauração.

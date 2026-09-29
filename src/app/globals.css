@@ -162,23 +162,18 @@ strong {
   margin-top: 2px;
 }
 .brand-symbol {
-  position: relative;
-  color: var(--lime);
-  font-style: italic;
-  font-size: 46px;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -8px;
-  padding-right: 9px;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3a4730;
+  border-radius: 10px;
+  background: #20271c;
 }
-.brand-symbol span {
-  position: absolute;
-  width: 5px;
-  height: 13px;
-  transform: skew(-20deg);
-  background: var(--lime);
-  right: -2px;
-  top: 2px;
+.brand-symbol svg {
+  width: 29px;
+  height: 29px;
 }
 .nav-label {
   font-size: 9px;
@@ -312,6 +307,9 @@ strong {
   align-items: center;
   gap: 24px;
 }
+.demo-label-short {
+  display: none;
+}
 .demo-badge {
   border: 1px solid var(--line);
   border-radius: 5px;
@@ -322,8 +320,26 @@ strong {
   align-items: center;
   gap: 9px;
 }
-.topbar-date {
-  font-size: 11px;
+.topbar-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.clock-date {
+  font-size: 10px;
+  color: var(--muted);
+}
+.clock-time {
+  font-size: 12px;
+  color: var(--text);
+}
+.clock-zone {
+  margin-left: 4px;
+  font-size: 9px;
   color: var(--muted);
 }
 .small-logo {
@@ -334,6 +350,10 @@ strong {
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--lime);
+}
+.small-logo svg {
+  width: 19px;
+  height: 19px;
 }
 main {
   max-width: 1600px;
@@ -2351,7 +2371,8 @@ main > *,
     display: none;
   }
   .brand-symbol {
-    font-size: 43px;
+    width: 42px;
+    height: 42px;
   }
   .nav-item {
     justify-content: center;
@@ -2431,7 +2452,6 @@ main > *,
   .topbar-right {
     gap: 12px;
   }
-  .topbar-date,
   .small-logo {
     display: none;
   }
@@ -2836,12 +2856,12 @@ main > *,
     margin: 0 4px 33px;
   }
   .brand-symbol {
-    font-size: 34px;
+    width: 38px;
+    height: 38px;
   }
-  .brand-symbol span {
-    height: 10px;
-    width: 4px;
-    right: 1px;
+  .brand-symbol svg {
+    width: 26px;
+    height: 26px;
   }
   .nav-item {
     padding: 13px 8px;
@@ -2857,10 +2877,23 @@ main > *,
     font-size: 9px;
     gap: 6px;
   }
+  .breadcrumb-root,
+  .breadcrumb > svg {
+    display: none;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
   .demo-badge {
     font-size: 7px;
     padding: 5px 6px;
     gap: 6px;
+  }
+  .demo-label-full {
+    display: none;
+  }
+  .demo-label-short {
+    display: inline;
   }
   .demo-badge .live-dot {
     width: 4px;
@@ -3601,9 +3634,6 @@ main > *,
   .report-footer {
     flex-direction: row;
     font-size: 8px;
-  }
-  .brand-symbol {
-    color: #526b2c !important;
   }
   .section-title {
     margin-bottom: 14px;

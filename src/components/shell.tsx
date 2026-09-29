@@ -9,13 +9,14 @@ import {
   FileText,
   ChevronRight,
   ArrowUpRight,
-  Activity,
   Dumbbell,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { Loading } from "./ui";
 import { StorageRecovery } from "./storage-recovery";
+import { BrandMark } from "./brand-mark";
+import { BrasiliaClock } from "./brasilia-clock";
 const nav = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
   { href: "/clientes", label: "Clientes", icon: Users },
@@ -32,7 +33,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <aside className="sidebar">
         <Link href="/" className="brand" aria-label="Vértice início">
           <span className="brand-symbol">
-            V<span />
+            <BrandMark />
           </span>
           <span>
             vértice<span className="brand-sub">PERFORMANCE LAB</span>
@@ -88,7 +89,8 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            Workspace <ChevronRight size={13} />
+            <span className="breadcrumb-root">Workspace</span>
+            <ChevronRight size={13} />
             <span>
               {nav.find((n) => n.href !== "/" && path.startsWith(n.href))
                 ?.label || "Visão geral"}
@@ -96,11 +98,13 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
           <div className="topbar-right">
             <span className="demo-badge">
-              <span className="live-dot" /> Modo demonstração
+              <span className="live-dot" />
+              <span className="demo-label-full">Modo demonstração</span>
+              <span className="demo-label-short">Demo</span>
             </span>
-            <span className="topbar-date">18 set, 2026</span>
-            <span className="small-logo">
-              <Activity size={17} />
+            <BrasiliaClock />
+            <span className="small-logo" aria-hidden="true">
+              <BrandMark />
             </span>
           </div>
         </header>
